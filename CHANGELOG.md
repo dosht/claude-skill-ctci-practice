@@ -2,6 +2,22 @@
 
 All notable changes to this skill are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses [semver](https://semver.org/).
 
+## [1.0.1] — 2026-04-14
+
+### Added
+- Default / welcome handler for bare `/ctci-practice` invocation. New users see a self-contained guide + verb reference; returning users see a status summary (last session, progress, weakest topic, in-progress problem) with a suggested next action.
+- `help` verb — compact reference of all verbs; no state mutation.
+
+### Changed
+- All multi-choice prompts now use the `AskUserQuestion` tool (clickable options) instead of typed-number lists or `y/N`. Affects:
+  - Onboarding's 6 questions (purpose, language, experience, target, topics, hint depth)
+  - The onboarding confirmation prompt
+  - Re-onboarding branching (resume / re-run / wipe) + wipe confirmation
+  - `solve` reveal confirmation
+  - `accept` mark-complete confirmation
+  - `replan` apply-changes approval
+- Topic coverage question (Q5) now offers preset options (Interview essentials / All / Core algo only / Custom) because `AskUserQuestion` supports ≤4 options; custom mode falls back to conversational typed input.
+
 ## [1.0.0] — 2026-04-14
 
 ### Added

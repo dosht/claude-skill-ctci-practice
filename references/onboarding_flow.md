@@ -2,117 +2,162 @@
 
 The `start` verb runs this conversation once, at the very beginning. Ask ONE question at a time; each answer conditions the next.
 
-## Opening message
+**All multi-choice questions below are rendered via the `AskUserQuestion` tool (clickable options), not typed-number prompts.** Free-text answers (dates, hour counts) use conversational input.
 
-> I'll set up an AI-guided Cracking the Coding Interview practice workspace here. I'll ask 6 quick questions, then build your roadmap and a Python env. Ready?
+## Writing style for all questions
 
-Wait for acknowledgment. If the user says no or wants to discuss, don't push — answer questions, re-offer when they're ready.
+Use plain, user-intent language. Avoid jargon (no "DS&A", no "structured concurrency", no abbreviations a beginner wouldn't know). Option labels read like how the user would describe themselves; descriptions say what happens if they pick it.
 
-## Question 1 — Purpose
+Files are written ONLY at the very end, after the user confirms. During Q1–Q6 the skill asks questions; no file writes.
 
-> What's the goal?
-> 1. Interview prep (company-specific)
-> 2. DS&A foundations (building the skill from scratch)
-> 3. General refresh (returning after a break)
+## Question 1 — Why are you practicing?
 
-Store as `purpose` in SKILL_STATE.md.
+Call `AskUserQuestion`:
+- **Question:** "What brings you here?"
+- **Header:** "Your goal"
+- **Options:**
+    - `I have an interview coming up` — "Target-specific prep for a real upcoming interview (company, role, date)"
+    - `I want to learn algorithms from scratch` — "Build data structures and algorithms skills from the ground up; no deadline pressure"
+    - `I'm sharpening rusty skills` — "Returning after a break; want a structured refresher"
 
-## Question 2 — Language
+Store the selected label as `purpose` in SKILL_STATE.md. Map to internal values:
+- `I have an interview coming up` → `interview_prep`
+- `I want to learn algorithms from scratch` → `dsa_foundations`
+- `I'm sharpening rusty skills` → `general_refresh`
 
-> Which language?
-> 1. Python (recommended — v1 has full scaffolding)
-> 2. Other (Java / JavaScript / etc. — basic support, no env scaffold yet)
+## Question 2 — Which programming language?
 
-Store as `language`. If "other", ask which, note as-is, and warn: "v1 has full support only for Python; for other languages, the skill will still manage roadmap + hints + review, but won't auto-setup your environment."
+Call `AskUserQuestion`:
+- **Question:** "Which language will you write your solutions in?"
+- **Header:** "Language"
+- **Options:**
+    - `Python` — "I'll set up a virtual environment and pytest for you automatically"
+    - `Another language` — "Roadmap and AI hints still work; you handle your own environment setup"
 
-## Question 3 — Experience level
+If `Another language` is selected, ask in conversation: "Which one? (e.g., Java, JavaScript, Go)". Store as-is. Let the user know: "Got it — I'll skip the Python-specific setup; you'll run and test your solutions yourself."
 
-> How much problem-solving practice do you have?
-> 1. New — this is my first structured DS&A practice
-> 2. Some — I've done LeetCode/HackerRank casually
-> 3. Regular — I practice often, want structured review
+## Question 3 — How much practice do you already have?
 
-Store as `experience_level`. This calibrates how much context the skill includes in explanations (new = more hand-holding; regular = terse).
+Call `AskUserQuestion`:
+- **Question:** "How familiar are you with coding interview problems?"
+- **Header:** "Experience"
+- **Options:**
+    - `Totally new` — "I haven't solved algorithm problems before; explain things thoroughly"
+    - `A little` — "I've dabbled with LeetCode or similar; give me moderate detail"
+    - `Regular practice` — "I solve these often; keep explanations concise"
 
-## Question 4 — Target
+Store as `experience_level` (values: `new`, `some`, `regular`). This calibrates how much context the skill provides in explanations.
 
-If Q1 was "interview prep":
-> When's the interview? (date, or "don't know / open-ended")
+## Question 4 — When or how much?
 
-If Q1 was "DS&A foundations" or "general refresh":
-> How many hours per week can you commit?
+Branches based on Q1:
 
-Store as `target_mode` ("interview_date" | "weekly_hours" | "open_ended") and `target_value` (ISO date string, hours int, or null).
+**If they picked `I have an interview coming up`:**
+- Ask in conversation: "When's the interview? (a date like 2026-05-15, or say 'I don't know yet' if it's not scheduled)"
+- Parse as ISO date. If "don't know" / unparseable → `target_mode = "open_ended"`, `target_value = null`.
+- Otherwise `target_mode = "interview_date"`, `target_value = <ISO string>`.
 
-This drives pacing — a 2-week interview window means fewer total problems with more focus; 5 hours/week open-ended means full coverage across chapters.
+**Otherwise (learning from scratch or refreshing):**
+- Ask in conversation: "How many hours per week can you realistically practice?"
+- Parse as integer. If unparseable → re-ask once, then default to 3 and proceed.
+- `target_mode = "weekly_hours"`, `target_value = <int>`.
 
-## Question 5 — Topic coverage
+## Question 5 — Which topics do you want to practice?
 
-Show the full CtCI chapter list (read `references/chapter_map.md` for the list). Ask:
+Call `AskUserQuestion`:
+- **Question:** "Which topics do you want on your roadmap?"
+- **Header:** "Topics"
+- **Options:**
+    - `Interview essentials` — "The 6 topics that cover most tech interviews: arrays/strings, linked lists, stacks/queues, trees/graphs, recursion/DP, sorting/searching (59 problems)"
+    - `Everything in the book` — "All 11 chapters, 133 problems. Thorough but long."
+    - `Just the core 3` — "Arrays/strings, trees/graphs, recursion/DP only — fastest path to practicing the most-common interview patterns (35 problems)"
+    - `Let me pick` — "I'll tell you which chapter numbers I want"
 
-> Which chapters? (type numbers comma-separated, or "all")
-> 1. Arrays and Strings
-> 2. Linked Lists
-> 3. Stacks and Queues
-> 4. Trees and Graphs
-> 5. Bit Manipulation
-> 6. Math and Logic Puzzles
-> 7. Object-Oriented Design
-> 8. Recursion and Dynamic Programming
-> 10. Sorting and Searching
-> 16. Moderate
-> 17. Hard
+On `Let me pick`, go to step 5b. Otherwise, apply the preset and proceed to Q6:
+- `Interview essentials` → `arrays_strings, linked_lists, stacks_queues, trees_graphs, recursion_dp, sorting_searching`
+- `Everything in the book` → all 11 slugs
+- `Just the core 3` → `arrays_strings, trees_graphs, recursion_dp`
 
-Store selected topic slugs as comma-separated `selected_topics` in SKILL_STATE.md.
+### Step 5b — custom selection (only if `Custom selection` chosen)
 
-**Tip-based default:** if the user says "don't know, I want the interview essentials", auto-select: Arrays/Strings, Linked Lists, Stacks/Queues, Trees/Graphs, Recursion/DP, Sorting/Searching. These cover the vast majority of first-round FAANG questions.
+Ask in conversation:
+> Which chapters? List by number, comma-separated. Available:
+> - 1 Arrays & Strings
+> - 2 Linked Lists
+> - 3 Stacks & Queues
+> - 4 Trees & Graphs
+> - 5 Bit Manipulation
+> - 6 Math & Logic
+> - 7 Object-Oriented Design
+> - 8 Recursion & DP
+> - 10 Sorting & Searching
+> - 16 Moderate
+> - 17 Hard
 
-## Question 6 — Hint default depth
+Parse comma-separated integers. Map to topic slugs via `references/chapter_map.md`. Store as comma-separated `selected_topics` in SKILL_STATE.md.
 
-> When you ask for a hint, how deep should the first hint be by default?
-> 1. Nudge (L1) — a question pointing at your code (recommended)
-> 2. Direction (L2) — name the technique + approach
+## Question 6 — How much of a hint do you want?
 
-Store as `hint_level_default` (1 or 2). User can always override per-request later.
+Call `AskUserQuestion`:
+- **Question:** "When you ask for a hint, how much do you want by default?"
+- **Header:** "Hint depth"
+- **Options:**
+    - `A small nudge` — "Just a pointed question about your code, like 'did you notice line 12 skips the last element?' Solve it yourself."
+    - `Name the technique` — "Say what approach applies (BFS, two pointers, hash map, etc.) and why. More help, still your solution to write."
+
+Store as `hint_level_default` (1 for small nudge, 2 for technique). You can always ask for more hints — the second and third hint each go one level deeper.
 
 ## After all 6 answers
 
-Acknowledge summary:
-> Great — here's what I'm setting up:
-> - Purpose: {purpose}
-> - Language: {language}
+Acknowledge summary in conversation:
+> Got it — here's your setup:
+> - Goal: {purpose label}
+> - Language: {language label}
 > - Target: {target summary}
-> - Topics: {topic count} chapters, {problem count} total problems
-> - Default hint depth: L{N}
+> - Topics: {topic count} chapters, {problem count} problems
+> - Default hint depth: {nudge|technique}
 
-Then ask for a single confirmation:
-> Shall I create the files and env? (y/N)
+Then call `AskUserQuestion`:
+- **Question:** "Ready to create your practice workspace?"
+- **Header:** "Create files"
+- **Options:**
+    - `Yes, set it up` — "Create the Python environment, roadmap, and profile files in this folder"
+    - `Not yet` — "Don't create anything; I can re-run onboarding later"
 
-On `y` / `yes`:
-1. Create `.venv/`, install pytest (if Python)
+On `Yes, set it up`:
+1. Create `.venv/`, install pytest (Python only)
 2. Write `conftest.py`, `.gitignore`
 3. Write `SKILL_STATE.md` from `templates/SKILL_STATE.template.md` with the collected answers
-4. Read `references/chapter_map.md`, filter by selected topics, emit `ROADMAP.md` (all entries `- [ ]` initially)
-5. Create empty `session_log.md` with a single entry for "onboarding completed"
-6. Print: "Setup done. Run `/ctci-practice next` to scaffold your first problem."
+4. Read `references/chapter_map.md`, filter by selected topics, emit `ROADMAP.md` (all entries `[ ]`)
+5. Create `session_log.md` with a single "onboarding completed" entry
+6. Print: `All set. Run /ctci-practice next to start your first problem.`
 
-On `n` / `no`: don't write anything. Tell user they can re-run `/ctci-practice start` anytime.
+On `Not yet`: don't write anything. Tell the user: "No files created. Run `/ctci-practice start` whenever you're ready."
 
-## Preference defaults (not asked at onboarding — prompted later when relevant)
+## Preference defaults (not asked at onboarding)
 
 These are NOT asked during onboarding (too many questions up front). They default to:
-- `explanation_style`: "full" (new user), "terse" (regular user). User can override anytime: "use terse explanations".
-- `diagrams_style`: "mermaid" (modern default; Claude Code renders it)
-- `solution_style`: "no_preference"
+- `explanation_style`: `full` for new users; `terse` for regular. User can override anytime via plain English: "use terse explanations".
+- `diagrams_style`: `mermaid` (Claude Code renders it).
+- `solution_style`: `no_preference`.
 
-When a user makes a preference statement during a session, the skill acknowledges and writes it to SKILL_STATE.md.
+When a user makes a preference statement during a session, the skill acknowledges and writes it to SKILL_STATE.md — without any AskUserQuestion (preference statements are unambiguous).
 
 ## Re-onboarding
 
-If `/ctci-practice start` is run when `SKILL_STATE.md` already exists:
-> You already have a setup here. Options:
-> 1. Resume existing (recommended — run `/ctci-practice status`)
-> 2. Re-run onboarding (keeps existing practice/ but overwrites SKILL_STATE and ROADMAP)
-> 3. Wipe everything and start over (will delete practice/, ROADMAP.md, session_log.md)
+If `/ctci-practice start` is run when `SKILL_STATE.md` already exists, call `AskUserQuestion`:
+- **Question:** "You've already got a practice setup here. What would you like to do?"
+- **Header:** "Re-onboard"
+- **Options:**
+    - `Keep going where I left off` — "Don't change anything; show my current status"
+    - `Change my preferences` — "Redo the questions; keep my problem progress"
+    - `Start completely over` — "Erase everything (progress, files, environment) and start fresh — this cannot be undone"
 
-On (3), confirm twice before deleting anything.
+On `Start completely over`, confirm via a second `AskUserQuestion`:
+- **Question:** "Are you sure? This will delete your progress and all practice files."
+- **Header:** "Confirm erase"
+- **Options:**
+    - `Cancel, keep my work` — "Don't delete anything"
+    - `Yes, erase everything` — "Permanently delete practice/, ROADMAP.md, session_log.md, SKILL_STATE.md"
+
+Only execute the delete on explicit `Yes, erase everything` selection.
