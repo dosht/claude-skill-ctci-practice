@@ -4,6 +4,12 @@ An AI-guided practice companion for working through *Cracking the Coding Intervi
 
 **Scope:** 133 problems across 11 chapters. Python-first environment (venv + pytest auto-scaffolded); other languages get the roadmap and hint loop but manage their own env.
 
+## Demo
+
+[![Watch the ctci-practice demo on YouTube](https://img.youtube.com/vi/aiNMqhg4q5Q/maxresdefault.jpg)](https://www.youtube.com/watch?v=aiNMqhg4q5Q)
+
+> 2-minute walkthrough: onboarding → roadmap → solving a problem with progressive hints → validation.
+
 ---
 
 ## Why this exists
@@ -197,3 +203,4 @@ See `CHANGELOG.md` for known v1 gaps.
 - Built against *Cracking the Coding Interview, 6th Edition* by Gayle Laakmann McDowell (book is required; this skill is a practice companion, not a replacement).
 - Skill structure informed by Anthropic's [Claude Code skills](https://claude.com/claude-code) conventions.
 - Universal install supported via [openskills](https://github.com/numman-ali/openskills).
+- The [demo video](https://www.youtube.com/watch?v=aiNMqhg4q5Q) was generated entirely with AI: animation by [Remotion](https://www.remotion.dev) and voiceover by [Cartesia](https://cartesia.ai), both orchestrated through Claude Code skills.
